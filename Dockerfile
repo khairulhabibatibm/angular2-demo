@@ -15,22 +15,20 @@ COPY . .
 RUN npm run ng build -- --deploy-url=/angular2-demo/ --prod
 
 
-FROM nginxinc/nginx-unprivileged 
-
-USER root
+FROM nginxinc/nginx-unprivileged:1.20
 
 #!/bin/sh
 
-COPY ./nginx.conf /etc/nginx/nginx.conf
+COPY ./default.conf /etc/nginx/conf.d/default.conf
 
 # Copy from the stahg 1
 COPY --from=builder /app-ui/dist /usr/share/nginx/html
 
 ## add permissions
-RUN chown -R nginx:nginx /var/cache/nginx && \
-        chown -R nginx:nginx /var/log/nginx && \
-        chown -R nginx:nginx /etc/nginx/conf.d
-
+# RUN chown -R nginx:nginx /var/cache/nginx && \
+#         chown -R nginx:nginx /var/log/nginx && \
+#         chown -R nginx:nginx /etc/nginx/conf.d
+        
 # RUN mkdir -p /var/run
 
 # RUN touch /var/run/nginx.pid && \
