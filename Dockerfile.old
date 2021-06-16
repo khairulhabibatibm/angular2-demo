@@ -1,19 +1,14 @@
-# stage1 as builder
-FROM node:10-alpine as builder
+FROM node:14
 
-# copy the package.json to install dependencies
-COPY package.json ./
+ENV JQ_VERSION=1.6
+RUN wget --no-check-certificate https://github.com/stedolan/jq/releases/download/jq-${JQ_VERSION}/jq-linux64 -O /tmp/jq-linux64
+RUN cp /tmp/jq-linux64 /usr/bin/jq
+RUN chmod +x /usr/bin/jq
 
-# Install the dependencies and make the folder
-RUN npm install && mkdir /app-ui && mv ./node_modules ./app-ui
-
-WORKDIR /app-ui
-
+WORKDIR /app
 COPY . .
-
-# Build the project and copy the files
-RUN npm run ng build -- --deploy-url=/angular2-demo/ --prod
-
+RUN jq 'to_entries | map_values({ (.key) : ("$" + .key) }) | reduce .[] as $item ({}; . + $item)' ./src/config.json | ./src/config.tmp.json && mv ./src/config.tmp.json config.json
+RUN npm install && npm run build
 
 FROM nginx:1.17
 # Angular
@@ -31,16 +26,17 @@ RUN touch /var/run/nginx.pid && \
    chown -R nginx:nginx /var/run/nginx.pid
 RUN chgrp -R root /var/cache/nginx /var/run /var/log/nginx /var/run/nginx.pid && \
    chmod -R 775 /var/cache/nginx /var/run /var/log/nginx /var/run/nginx.pid
+COPY ./start-nginx.sh /usr/bin/start-nginx.sh
+RUN chmod +x /usr/bin/start-nginx.sh
 
 EXPOSE 8080
 WORKDIR /opt/app
 # Angular
-COPY --from=builder --chown=nginx /app-ui/dist/ .
+COPY --from=0 --chown=nginx /app/dist/ .
 # React
 # COPY --from=0 /app/build .
 # VueJS
 # COPY --from=0 /app/dist .
 RUN chmod -R a+rw /opt/app
 USER nginx
-
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT [ "start-nginx.sh" ]
