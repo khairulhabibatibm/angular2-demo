@@ -15,32 +15,28 @@ COPY . .
 RUN npm run ng build -- --deploy-url=/angular2-demo/ --prod
 
 
-FROM nginx:1.17
-# Angular
-ENV JSFOLDER=/opt/app/*.js
-# React
-# ENV JSFOLDER=/opt/app/static/js/*.js
-# VueJS
-# ENV JSFOLDER=/opt/app/js/*.js
+FROM nginxinc/nginx-unprivileged 
+
+USER root
+
+#!/bin/sh
+
 COPY ./nginx.conf /etc/nginx/nginx.conf
-RUN mkdir -p /opt/app && chown -R nginx:nginx /opt/app && chmod -R 775 /opt/app
+
+# Copy from the stahg 1
+COPY --from=builder /app-ui/dist /usr/share/nginx/html
+
+## add permissions
 RUN chown -R nginx:nginx /var/cache/nginx && \
-   chown -R nginx:nginx /var/log/nginx && \
-   chown -R nginx:nginx /etc/nginx/conf.d
+        chown -R nginx:nginx /var/log/nginx && \
+        chown -R nginx:nginx /etc/nginx/conf.d
+
 RUN touch /var/run/nginx.pid && \
-   chown -R nginx:nginx /var/run/nginx.pid
-RUN chgrp -R root /var/cache/nginx /var/run /var/log/nginx /var/run/nginx.pid && \
-   chmod -R 775 /var/cache/nginx /var/run /var/log/nginx /var/run/nginx.pid
+        chown -R nginx:nginx /var/run/nginx.pid
+
+## switch to non-root user
+USER nginx
 
 EXPOSE 8080
-WORKDIR /opt/app
-# Angular
-COPY --from=builder --chown=nginx /app-ui/dist/ .
-# React
-# COPY --from=0 /app/build .
-# VueJS
-# COPY --from=0 /app/dist .
-RUN chmod -R a+rw /opt/app
-USER nginx
 
 CMD ["nginx", "-g", "daemon off;"]
