@@ -31,14 +31,12 @@ RUN chown -R nginx:nginx /var/cache/nginx && \
         chown -R nginx:nginx /var/log/nginx && \
         chown -R nginx:nginx /etc/nginx/conf.d
 
-RUN mkdir -p /var/run
+# RUN mkdir -p /var/run
 
-RUN touch /var/run/nginx.pid && \
-        chown -R nginx:nginx /var/run/nginx.pid
+# RUN touch /var/run/nginx.pid && \
+#         chown -R nginx:nginx /var/run/nginx.pid
 
 ## switch to non-root user
 USER nginx
 
 EXPOSE 8080
-
-CMD ["nginx", "-g", "daemon off;"]
